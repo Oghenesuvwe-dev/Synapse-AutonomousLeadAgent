@@ -1,0 +1,7 @@
+{
+  "body": {
+    "text": "New lead: Acme Corp. Website: https://acme.example. Contact: jane.doe@acme.example",
+    "source": "slack",
+    "metadata": {"channel": "#leads"}
+  }
+}

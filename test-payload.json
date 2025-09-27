@@ -1,0 +1,8 @@
+{
+  "httpMethod": "POST",
+  "path": "/webhook/email",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"from\": \"sarah.johnson@techcorp.com\", \"subject\": \"CRM Solution Inquiry\", \"text\": \"Hi, I'm Sarah Johnson, VP of Engineering at TechCorp. We need a CRM solution.\"}"
+}

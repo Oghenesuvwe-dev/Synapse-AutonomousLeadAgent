@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/webhook/email",
+  "headers": {
+    "Content-Type": "application/json",
+    "User-Agent": "Mailgun/1.0"
+  },
+  "body": "{\"from\": \"sarah.johnson@techcorp.com\", \"subject\": \"CRM Solution Inquiry - Urgent\", \"text\": \"Hi, I'm Sarah Johnson, VP of Engineering at TechCorp (techcorp.com). We're looking to implement a new CRM solution for our 500+ person team. Need to make a decision by end of Q1. Budget approved. Please contact me at sarah.j@techcorp.com\", \"sender\": \"sarah.johnson@techcorp.com\", \"timestamp\": \"1640995200\"}"
+}

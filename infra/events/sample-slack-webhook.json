@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/webhook/slack",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": "Slackbot 1.0"
+  },
+  "body": "token=verification_token&team_id=T1234567890&team_domain=example&channel_id=C1234567890&channel_name=leads&user_id=U1234567890&user_name=john.smith&command=/lead&text=New%20lead%3A%20ABC%20Marketing%20agency%20looking%20for%20CRM%20solution.%20Contact%3A%20john%40abcmarketing.co%20Website%3A%20abcmarketing.co&response_url=https%3A//hooks.slack.com/commands/1234/5678&trigger_id=123456789.987654321.abcdef"
+}
