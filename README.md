@@ -304,8 +304,32 @@ For detailed project tasks and phase completion status, see the files in `ABOUT 
 - **Email Webhook**: `https://ihlp8uao14.execute-api.us-east-1.amazonaws.com/Prod/webhook/email`
 - **Slack Webhook**: `https://ihlp8uao14.execute-api.us-east-1.amazonaws.com/Prod/webhook/slack`
 
-## 🧪 **Testing the System**
+## 🧪 **Live Demo**
 
+### **🎯 Interactive Demo Interface**
+Try Synapse AI with our live demo interface:
+- **Demo URL**: [Open Live Demo](demo.html)
+- **GitHub Pages**: Available when repository is deployed
+- **Local Testing**: Open `demo.html` in your browser
+
+### **📝 Sample Test Scenarios**
+
+**High Priority Lead:**
+```
+Sarah Johnson, VP Engineering at TechCorp, needs CRM for 500+ team. Budget approved $100k. Contact: sarah.j@techcorp.com
+```
+
+**Investment Research:**
+```
+Need Tesla stock analysis for $2M portfolio decision. Urgent market outlook required.
+```
+
+**Low Priority Inquiry:**
+```
+Hi, I'm a student researching CRM options for a project. Can you send information? Email: student@gmail.com
+```
+
+### **🔧 API Testing**
 ```bash
 # Test with sample lead
 curl -X POST https://ihlp8uao14.execute-api.us-east-1.amazonaws.com/Prod/webhook \
