@@ -2,7 +2,7 @@ import json
 import os
 import boto3
 from aws_lambda_powertools import Logger, Tracer
-from pysuitecrm import SuiteCRM
+from PySuiteCRM.SuiteCRM import SuiteCRM
 
 logger = Logger()
 tracer = Tracer()
@@ -33,6 +33,9 @@ def handler(event, context):
         }
 
     try:
+        # Change to /tmp directory for file operations
+        os.chdir('/tmp')
+        
         crm = SuiteCRM(
             url=crm_credentials["url"],
             client_id=crm_credentials["client_id"],

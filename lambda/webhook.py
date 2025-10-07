@@ -269,8 +269,104 @@ def generate_session_id(trigger_type: str, event: Dict[str, Any]) -> str:
     return f"{trigger_type}-{session_hash}"
 
 
+def send_email_notification(agent_response: str, original_content: str) -> None:
+    """Send email notification using AWS SES."""
+    ses_from_email = os.environ.get("SES_FROM_EMAIL")
+    ses_to_email = os.environ.get("SES_TO_EMAIL")
+    
+    if not ses_from_email or not ses_to_email:
+        logger.info("SES email addresses not configured, skipping email notification")
+        return
+    
+    try:
+        ses_client = boto3.client('ses')
+        agent_data = json.loads(agent_response)
+        
+        priority = agent_data.get("priority", "Medium")
+        summary = agent_data.get("summary", "Lead processed")
+        company = agent_data.get("extracted_data", {}).get("company", "Unknown")
+        contact_name = agent_data.get("extracted_data", {}).get("contact_name", "Unknown")
+        contact_email = agent_data.get("extracted_data", {}).get("contact_email", "Unknown")
+        
+        subject = f"🎯 New {priority} Priority Lead: {company}"
+        
+        body = f"""
+New lead processed by Synapse AI Agent:
+
+Company: {company}
+Contact: {contact_name}
+Email: {contact_email}
+Priority: {priority}
+
+Summary: {summary}
+
+Original Input: {original_content[:200]}...
+
+View full details in AWS CloudWatch logs.
+        """
+        
+        response = ses_client.send_email(
+            Source=ses_from_email,
+            Destination={'ToAddresses': [ses_to_email]},
+            Message={
+                'Subject': {'Data': subject},
+                'Body': {'Text': {'Data': body}}
+            }
+        )
+        
+        logger.info(f"Email notification sent successfully: {response['MessageId']}")
+        
+    except Exception as e:
+        logger.error(f"Error sending email notification: {str(e)}")
+
+
+def send_slack_notification(agent_response: str, original_content: str) -> None:
+    """Send notification to Slack webhook."""
+    slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not slack_webhook_url:
+        logger.info("Slack webhook URL not configured, skipping notification")
+        return
+    
+    try:
+        agent_data = json.loads(agent_response)
+        priority = agent_data.get("priority", "Medium")
+        summary = agent_data.get("summary", "Lead processed")
+        action = agent_data.get("action", "unknown")
+        company = agent_data.get("extracted_data", {}).get("company", "Unknown")
+        
+        color = "good" if priority == "High" else "warning" if priority == "Medium" else "#cccccc"
+        
+        payload = {
+            "text": "🎯 New Lead Processed by Synapse",
+            "attachments": [{
+                "color": color,
+                "fields": [
+                    {"title": "Company", "value": company, "short": True},
+                    {"title": "Priority", "value": priority, "short": True},
+                    {"title": "Action", "value": action, "short": True},
+                    {"title": "Summary", "value": summary, "short": False}
+                ]
+            }]
+        }
+        
+        import requests
+        response = requests.post(slack_webhook_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            logger.info("Slack notification sent successfully")
+        else:
+            logger.error(f"Slack notification failed: {response.status_code}")
+            
+    except Exception as e:
+        logger.error(f"Error sending Slack notification: {str(e)}")
+
+
 def format_response_for_trigger(trigger_type: str, agent_response: str, original_content: str) -> Any:
     """Format the agent response based on the trigger type."""
+    
+    # Send notifications for all successful responses
+    if agent_response and not agent_response.startswith("Error"):
+        send_slack_notification(agent_response, original_content)
+        send_email_notification(agent_response, original_content)
     
     if trigger_type == "slack":
         # Slack expects specific response format
