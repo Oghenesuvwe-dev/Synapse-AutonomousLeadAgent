@@ -8,45 +8,44 @@ One AI brain orchestrates multiple specialized functions, making intelligent dec
 
 ## Architecture
 
-```mermaid
-graph TD
-    %% Input Channels
-    A[Email Inquiry] --> D[API Gateway]
-    B[Slack Message] --> D
-    C[Website Form] --> D
-    
-    %% Core Processing
-    D --> E[Monolith Lambda<br/>Single Function<br/>No Throttling]
-    
-    %% AI & Processing
-    E --> F[Bedrock Claude 3<br/>Sonnet AI Analysis]
-    E --> G[Web Scraping<br/>Company Intelligence]
-    E --> H[SuiteCRM OAuth2<br/>Real Lead Creation]
-    E --> I[Notifications<br/>Multi-Channel]
-    
-    %% Storage & External Systems
-    G --> J[S3 Bucket<br/>Web Intelligence]
-    H --> K[SuiteCRM<br/>Real Leads]
-    I --> L[AWS SES<br/>Email Notifications]
-    I --> M[Slack Webhook<br/>devdotenv.slack.com]
-    
-    %% Success Metrics
-    N[100% Success Rate<br/>5 Channels Working<br/>Real CRM Integration]
-    
-    %% Styling
-    classDef input fill:#e1f5fe
-    classDef core fill:#f3e5f5
-    classDef ai fill:#e8f5e8
-    classDef storage fill:#fff3e0
-    classDef output fill:#fce4ec
-    classDef success fill:#e0f2f1
-    
-    class A,B,C input
-    class D,E core
-    class F,G,H,I ai
-    class J,K storage
-    class L,M output
-    class N success
+```
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   Email Inquiry │  │  Slack Message  │  │  Website Form   │
+└─────────┬───────┘  └─────────┬───────┘  └─────────┬───────┘
+          │                    │                    │
+          └────────────────────┼────────────────────┘
+                               │
+                    ┌─────────────────┐
+                    │   API Gateway   │
+                    └─────────┬───────┘
+                              │
+                    ┌─────────────────┐
+                    │ Monolith Lambda │
+                    │ Single Function │
+                    │  No Throttling  │
+                    └─────────┬───────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼───────┐    ┌────────▼────────┐    ┌──────▼──────┐
+│ Bedrock Claude │    │  Web Scraping   │    │ SuiteCRM    │
+│ 3 Sonnet AI   │    │ Company Intel   │    │ OAuth2 Lead │
+│   Analysis     │    │                 │    │  Creation   │
+└────────────────┘    └─────────┬───────┘    └──────┬──────┘
+                                │                   │
+                      ┌─────────▼───────┐    ┌──────▼──────┐
+                      │   S3 Bucket     │    │  SuiteCRM   │
+                      │ Web Intelligence│    │ Real Leads  │
+                      └─────────────────┘    └─────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Notifications                            │
+├─────────────────────┬───────────────────────────────────────┤
+│     AWS SES         │        Slack Webhook                  │
+│ Email Notifications │    devdotenv.slack.com               │
+└─────────────────────┴───────────────────────────────────────┘
+
+🎯 100% Success Rate • 5 Channels Working • Real CRM Integration
 ```
 
 ## Live Demo
@@ -181,7 +180,6 @@ curl -X POST https://mqxfgf4aw5.execute-api.us-east-1.amazonaws.com/Prod/webhook
 ---
 
 **Built with AWS Bedrock Claude 3 Sonnet | API Gateway | Lambda | S3 | SES | Secrets Manager | SuiteCRM OAuth2 | Slack Webhooks | 100% Success Rate**
-
 
 
 
