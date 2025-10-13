@@ -25,13 +25,13 @@ One AI brain orchestrates multiple specialized functions, making intelligent dec
                     │  No Throttling  │
                     └─────────┬───────┘
                               │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼───────┐    ┌────────▼────────┐    ┌──────▼──────┐
-│ Bedrock Claude │    │  Web Scraping   │    │ SuiteCRM    │
-│ 3 Sonnet AI   │    │ Company Intel   │    │ OAuth2 Lead │
-│   Analysis     │    │                 │    │  Creation   │
-└────────────────┘    └─────────┬───────┘    └──────┬──────┘
+        ┌─────────────────────┼──────────────────┐
+        │                     │                  │
+┌───────▼────────┐   ┌────────▼────────┐   ┌─────▼───────┐
+│ Bedrock Claude │   │  Web Scraping   │   │ SuiteCRM    │
+│ 3 Sonnet AI    │   │ Company Intel   │   │ OAuth2 Lead │
+│   Analysis     │   │                 │   │  Creation   │
+└────────────────┘   └──────────┬──────┘   └────────┬────┘
                                 │                   │
                       ┌─────────▼───────┐    ┌──────▼──────┐
                       │   S3 Bucket     │    │  SuiteCRM   │
@@ -42,17 +42,16 @@ One AI brain orchestrates multiple specialized functions, making intelligent dec
 │                    Notifications                            │
 ├─────────────────────┬───────────────────────────────────────┤
 │     AWS SES         │        Slack Webhook                  │
-│ Email Notifications │    devdotenv.slack.com               │
+│ Email Notifications │    devdotenv.slack.com                │
 └─────────────────────┴───────────────────────────────────────┘
 
 🎯 100% Success Rate • 5 Channels Working • Real CRM Integration
 ```
 
 ## Live Demo
+- **Frontend**: https://synapse-lead-agent.onrender.com
 
-- **Frontend**: https://synapse-autonomousleadagent.onrender.com/demo.html
-- **API Endpoint**: https://mqxfgf4aw5.execute-api.us-east-1.amazonaws.com/Prod/webhook
-
+ 
 ## Processing Flow
 
 ### Input → Processing → Output
@@ -97,8 +96,8 @@ One AI brain orchestrates multiple specialized functions, making intelligent dec
 
 ### Environment Variables
 ```bash
-SES_FROM_EMAIL=Oghenesuvweomashone@gmail.com
-SES_TO_EMAIL=Oghenesuvweomashone@gmail.com
+SES_FROM_EMAIL=Myemailers@gmail.com
+SES_TO_EMAIL=Myemailers@gmail.com
 SLACK_WEBHOOK_URL=<your-slack-webhook-url>
 SUITECRM_SECRET_ID=Synapse/SuiteCRM
 SCRAPER_BUCKET=synapse-scraper-monolith-442042519962
@@ -169,7 +168,7 @@ curl -X POST https://mqxfgf4aw5.execute-api.us-east-1.amazonaws.com/Prod/webhook
     "ai_analysis": "✅ URGENT priority detected",
     "web_scraping": "✅ Company intelligence gathered",
     "crm_creation": "✅ Real lead created",
-    "email": "✅ Sent to Oghenesuvweomashone@gmail.com",
+    "email": "✅ Sent to Myemailers@gmail.com",
     "slack": "✅ Posted to devdotenv.slack.com"
   }
 }
