@@ -1,0 +1,62 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Lead Processing Actions",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/scrape": {
+      "post": {
+        "summary": "Scrape a website",
+        "description": "Scrapes content from a website URL and returns a summary",
+        "operationId": "scrapeWebsite",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "The URL to scrape"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully scraped website",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "summary": {
+                      "type": "string",
+                      "description": "Text summary of the scraped content"
+                    },
+                    "s3_key": {
+                      "type": "string",
+                      "description": "S3 key where full HTML is stored"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid URL or missing parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  }
+}

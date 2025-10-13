@@ -1,0 +1,17 @@
+boto3
+requests
+beautifulsoup4
+botocore
+aws-lambda-powertools
+aws-xray-sdk
+pysuitecrm
+oauthlib
+moto
+pytest-mock
+cryptography==42.0.0
+httpx==0.27.0
+# Real integration dependencies
+hunter-api==1.5.0
+clearbit-python==0.2.0
+strands-sdk==2.1.0
+nova-act==1.0.0

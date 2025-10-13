@@ -1,0 +1,27 @@
+# Task/Debug Files
+*_TASK.md
+*_STATUS.md
+*_REPORT.md
+*_SUMMARY.md
+*_ROADMAP.md
+CREDENTIALS_MIGRATION_TASK.md
+AWS_CONCURRENCY_INCREASE_REQUEST.txt
+SUBMIT_AWS_SUPPORT_CASE.md
+
+# Development Scripts
+setup_suitecrm.py
+create_slack_webhook.py
+quick_fix.sh
+test_all_channels.sh
+
+# Build/Deploy Artifacts
+.aws-sam/
+samconfig.toml
+*.zip
+
+# IDE/System
+.DS_Store
+.vscode/
+.qodo/
+__pycache__/
+*.pyc

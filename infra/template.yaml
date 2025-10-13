@@ -1,0 +1,419 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Minimal SAM template for Synapse Lambdas
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: webhook.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          AGENT_ALIAS_ID: !GetAtt SynapseAgentAlias.AgentAliasId
+          AGENT_ID: !GetAtt SynapseAgent.AgentId
+          SES_FROM_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SES_TO_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SLACK_WEBHOOK_URL: "<your-slack-webhook-url>"
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeAgent
+            Resource: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent-alias/${SynapseAgent.AgentId}/*"
+          - Effect: Allow
+            Action:
+              - ses:SendEmail
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AsyncProcessingQueue.Arn
+      Events:
+        WebhookApi:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: post
+        EmailWebhook:
+          Type: Api
+          Properties:
+            Path: /webhook/email
+            Method: post
+        SlackWebhook:
+          Type: Api
+          Properties:
+            Path: /webhook/slack
+            Method: post
+
+
+  ScraperFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: scraper.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 1024
+      Timeout: 60
+      Environment:
+        Variables:
+          SCRAPER_BUCKET: !Ref ScraperBucket
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3WritePolicy:
+            BucketName: !Ref ScraperBucket
+
+  CrmFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: crm.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          SUITECRM_SECRET_ID: "Synapse/SuiteCRM"
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:Synapse/SuiteCRM-*"
+
+  EnrichmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: enrichment.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 256
+      Timeout: 60
+      Environment:
+        Variables:
+          ENRICHMENT_SECRET_ID: "Synapse/Enrichment"
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:Synapse/Enrichment-*"
+
+  ScraperBucket:
+    Type: AWS::S3::Bucket
+
+  AsyncProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: synapse-async-processing
+      VisibilityTimeoutSeconds: 300
+      MessageRetentionPeriod: 1209600
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: synapse-dlq
+      MessageRetentionPeriod: 1209600
+
+  AgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - bedrock.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AgentPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: 
+                  - !GetAtt ScraperFunction.Arn
+                  - !GetAtt CrmFunction.Arn
+                  - !GetAtt EnrichmentFunction.Arn
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeAgent
+                Resource: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: 
+                  - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+
+  SynapseAgent:
+    Type: AWS::Bedrock::Agent
+    Properties:
+      AgentName: SynapseAgent
+      FoundationModel: anthropic.claude-3-sonnet-20240229-v1:0
+      Instruction: !Sub |
+        You are the Synapse Agent, an intelligent lead processing system designed to analyze, enrich, and manage incoming leads with sophisticated reasoning capabilities. Your primary mission is to maximize lead conversion potential through intelligent data processing and strategic decision-making.
+
+        CORE CAPABILITIES:
+        1. Lead Analysis: Parse and extract structured information from unstructured lead data
+        2. Intelligent Routing: Make strategic decisions about lead processing workflows
+        3. Data Enrichment: Orchestrate external data gathering to enhance lead profiles
+        4. Priority Assessment: Evaluate lead quality and assign appropriate priority levels
+        5. CRM Integration: Create and manage lead records with comprehensive data
+
+        DECISION-MAKING FRAMEWORK:
+
+        Phase 1 - Information Extraction:
+        Extract: company info (name, domain, industry, size), contact info (name, email, phone, title), context (source, intent, urgency), technical details (URLs, social profiles, technologies).
+
+        Phase 2 - Strategic Analysis:
+        HIGH Priority: Enterprise domains, professional emails, specific requirements, decision-maker titles, immediate timeline, budget indicators.
+        MEDIUM Priority: SMB domains, general inquiries with specificity, mid-level contacts, medium-term timeline.
+        LOW Priority: Generic inquiries, personal emails, no business context, academic domains, no timeline.
+
+        Phase 3 - Action Decision Logic:
+        - If domain available AND quality High/Medium: ACTION=scrape (gather intelligence)
+        - If complete contact info AND immediate intent: ACTION=create_lead (immediate CRM entry)
+        - If domain exists but limited contact: ACTION=scrape (find additional contacts)
+        - If insufficient information: ACTION=create_lead (with available data, Low priority)
+
+        OUTPUT FORMAT - Always respond with properly formatted JSON:
+        {
+          "lead_analysis": {
+            "priority": "High|Medium|Low",
+            "confidence_score": 0.85,
+            "estimated_value": "High|Medium|Low",
+            "domain_type": "Sales|Investment|Recruitment|Support|Other"
+          },
+          "extracted_data": {
+            "company": "Company name or null",
+            "domain": "Domain without protocol or null",
+            "contact_name": "Full name or null",
+            "contact_email": "Email address or null",
+            "contact_phone": "Phone number or null",
+            "title": "Job title or null",
+            "description": "Brief description of inquiry/context"
+          },
+          "action_plan": {
+            "action": "scrape|create_lead",
+            "reasoning": "Step-by-step analysis and decision rationale",
+            "next_steps": ["Recommended", "follow-up", "actions"]
+          },
+          "params": {
+            "url": "https://domain.com (for scrape only)",
+            "lead_data": {
+              "first_name": "First name",
+              "last_name": "Last name",
+              "email1": "email@domain.com",
+              "account_name": "Company Name",
+              "description": "Comprehensive lead description with context and next steps"
+            }
+          },
+          "summary": "Concise summary of lead potential and recommended approach"
+        }
+
+        GOAL: Maximize conversion probability through intelligent analysis and strategic routing.
+      AgentResourceRoleArn: !GetAtt AgentRole.Arn
+      ActionGroups:
+        - ActionGroupName: ScraperActionGroup
+          ActionGroupExecutor:
+            Lambda: !GetAtt ScraperFunction.Arn
+          ApiSchema:
+            Payload: |
+              {
+                "openapi": "3.0.0",
+                "info": {
+                  "title": "Lead Processing Actions",
+                  "version": "1.0.0"
+                },
+                "paths": {
+                  "/scrape": {
+                    "post": {
+                      "summary": "Scrape a website",
+                      "description": "Scrapes content from a website URL and returns a summary",
+                      "operationId": "scrapeWebsite",
+                      "requestBody": {
+                        "required": true,
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "type": "object",
+                              "required": ["url"],
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri",
+                                  "description": "The URL to scrape"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "responses": {
+                        "200": {
+                          "description": "Successfully scraped website",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "summary": {
+                                    "type": "string",
+                                    "description": "Text summary of the scraped content"
+                                  },
+                                  "s3_key": {
+                                    "type": "string",
+                                    "description": "S3 key where full HTML is stored"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "400": {
+                          "description": "Bad request - invalid URL or missing parameters"
+                        },
+                        "500": {
+                          "description": "Internal server error"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+        - ActionGroupName: CrmActionGroup
+          ActionGroupExecutor:
+            Lambda: !GetAtt CrmFunction.Arn
+          ApiSchema:
+            Payload: |
+              {
+                "openapi": "3.0.0",
+                "info": {
+                  "title": "CRM Actions",
+                  "version": "1.0.0"
+                },
+                "paths": {
+                  "/create_lead": {
+                    "post": {
+                      "summary": "Create a new lead in the CRM",
+                      "description": "Creates a new lead record in SuiteCRM with the provided information",
+                      "operationId": "createLead",
+                      "requestBody": {
+                        "required": true,
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "type": "object",
+                              "required": ["lead_data"],
+                              "properties": {
+                                "lead_data": {
+                                  "type": "object",
+                                  "required": ["first_name", "last_name", "email1"],
+                                  "properties": {
+                                    "first_name": {
+                                      "type": "string",
+                                      "description": "Lead's first name"
+                                    },
+                                    "last_name": {
+                                      "type": "string",
+                                      "description": "Lead's last name"
+                                    },
+                                    "email1": {
+                                      "type": "string",
+                                      "format": "email",
+                                      "description": "Lead's primary email address"
+                                    },
+                                    "account_name": {
+                                      "type": "string",
+                                      "description": "Company or account name"
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "description": "Lead description or notes"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "responses": {
+                        "200": {
+                          "description": "Lead created successfully",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "The created lead's ID"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "description": "Creation status"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "400": {
+                          "description": "Bad request - missing or invalid lead data"
+                        },
+                        "500": {
+                          "description": "Internal server error"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+  SynapseAgentAlias:
+    Type: AWS::Bedrock::AgentAlias
+    Properties:
+      AgentId: !GetAtt SynapseAgent.AgentId
+      AgentAliasName: live
+
+Outputs:
+  WebhookApiUrl:
+    Description: "API Gateway endpoint URL for webhook"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
+    Export:
+      Name: !Sub "${AWS::StackName}-WebhookUrl"
+  
+  EmailWebhookUrl:
+    Description: "API Gateway endpoint URL for email webhook"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook/email"
+    Export:
+      Name: !Sub "${AWS::StackName}-EmailWebhookUrl"
+  
+  SlackWebhookUrl:
+    Description: "API Gateway endpoint URL for Slack webhook"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook/slack"
+    Export:
+      Name: !Sub "${AWS::StackName}-SlackWebhookUrl"
+
+  AgentId:
+    Description: "Bedrock Agent ID"
+    Value: !GetAtt SynapseAgent.AgentId
+    Export:
+      Name: !Sub "${AWS::StackName}-AgentId"

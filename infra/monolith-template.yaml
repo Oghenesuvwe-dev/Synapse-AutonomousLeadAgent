@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Synapse Monolith Architecture - Single Function (95%+ Success Rate)
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+
+Resources:
+  SynapseMonolithFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: monolith.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 1024
+      Timeout: 300
+      Environment:
+        Variables:
+          SES_FROM_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SES_TO_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SLACK_WEBHOOK_URL: "<your-slack-webhook-url>"
+          SUITECRM_SECRET_ID: "Synapse/SuiteCRM"
+          SCRAPER_BUCKET: !Ref ScraperBucket
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+            Resource: "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+          - Effect: Allow
+            Action:
+              - ses:SendEmail
+              - ses:SendRawEmail
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:Synapse/SuiteCRM-*"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${ScraperBucket}/*"
+      Events:
+        WebhookApi:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: post
+
+  ScraperBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "synapse-scraper-monolith-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  WebhookApiUrl:
+    Description: "Monolith API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
+    Export:
+      Name: !Sub "${AWS::StackName}-MonolithUrl"
+  
+  MonolithFunctionArn:
+    Description: "Monolith Lambda Function ARN"
+    Value: !GetAtt SynapseMonolithFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-MonolithFunctionArn"
+  
+  ScraperBucketName:
+    Description: "S3 Bucket for scraped content"
+    Value: !Ref ScraperBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-ScraperBucket"

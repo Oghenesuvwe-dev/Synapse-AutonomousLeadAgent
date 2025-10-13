@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SQS Async Processing for Synapse
+
+Resources:
+  AsyncProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: synapse-async-processing
+      VisibilityTimeoutSeconds: 300
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: synapse-dlq
+      MessageRetentionPeriod: 1209600
+
+  SQSProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: sqs_processor.handler
+      Runtime: python3.9
+      CodeUri: ../lambda/
+      MemorySize: 1024
+      Timeout: 300
+      Environment:
+        Variables:
+          AGENT_ID: "WBGPKMLBJG"
+          AGENT_ALIAS_ID: "VOV7LGFEIQ"
+          SES_FROM_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SES_TO_EMAIL: "Oghenesuvweomashone@gmail.com"
+          SLACK_WEBHOOK_URL: "https://webhook.site/8f2a3b4c-5d6e-7f8g-9h0i-1j2k3l4m5n6o"
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeAgent
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - ses:SendEmail
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt AsyncProcessingQueue.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AsyncProcessingQueue.Arn
+            BatchSize: 1
+
+Outputs:
+  QueueUrl:
+    Description: "SQS Queue URL for async processing"
+    Value: !Ref AsyncProcessingQueue
+    Export:
+      Name: "SynapseAsyncQueueUrl"
